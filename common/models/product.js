@@ -1,6 +1,20 @@
 'use strict';
 
 module.exports = function(Product) {
+  // Operation hook
+  Product.observe('before save', (ctx, next) => {
+    if (ctx.instance && ctx.instance.categoryId) {
+      return Product.app.models.Category
+        .count({id: ctx.instance.categoryId})
+        .then(res => {
+          if (res < 1) {
+            return Promise.reject('Error adding product to non-exisiting category');
+          }
+        });
+    }
+    return next();
+  });
+
   /**
    * Return true if input is larger than zero
    * @param  {number} quantity Number to validate
@@ -9,11 +23,10 @@ module.exports = function(Product) {
   const validQuantity = quantity => Boolean(quantity > 0);
 
   /**
-   * Buy this product
+   * Buy this product, Remote Method
    * @param {number} quantity Number of products to buy
    * @param {Function(Error, object)} callback
    */
-
   Product.prototype.buy = function(quantity, callback) {
     if (!validQuantity(quantity)) {
       return callback(`Invalid quantity ${quantity}`);
